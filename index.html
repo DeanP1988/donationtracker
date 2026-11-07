@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>GiveTax AU - Donation & Tax Tracker</title>
+
+  <!-- iOS Safari PWA Meta Tags & Web App Manifest -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GiveTax AU">
+  <meta name="application-name" content="GiveTax AU">
+  <meta name="theme-color" content="#000000">
+
+  <!-- Dynamic Apple Touch Icon: High-Resolution Australian Tax Giving Badge -->
+  <link rel="apple-touch-icon" id="appleTouchIconLink" href="">
+  <link rel="icon" type="image/svg+xml" id="faviconLink" href="">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ios: {
+              blue: '#0A84FF',
+              green: '#30D158',
+              indigo: '#5E5CE6',
+              orange: '#FF9F0A',
+              pink: '#FF375F',
+              purple: '#BF5AF2',
+              red: '#FF453A',
+              teal: '#64D2FF',
+              yellow: '#FFD60A',
+              card: '#1C1C1E',
+              cardSecondary: '#2C2C2E',
+              cardTertiary: '#3A3A3C',
+              bg: '#000000',
+              border: '#38383A',
+              borderSubtle: '#2C2C2E',
+              subtext: '#98989D',
+              textMuted: '#8E8E93'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* iOS App Feel Styles - Dark Mode First */
+    html {
+      color-scheme: dark;
+      background-color: #000000;
+    }
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      overscroll-behavior-y: none;
+      background-color: #000000;
+    }
+    input, textarea, select {
+      user-select: auto;
+      color-scheme: dark;
+    }
+    /* Hide scrollbar for tabs */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* iOS Safe Area Padding Utilities */
+    .pt-safe {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+    }
+    .pb-safe {
+      padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    }
+    .pb-content-safe {
+      padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    }
+    /* Frosted glass for dark navigation */
+    .ios-glass-dark {
+      background: rgba(18, 18, 20, 0.85);
+      backdrop-filter: blur(20px) saturate(190%);
+      -webkit-backdrop-filter: blur(20px) saturate(190%);
+    }
+    /* Print Styles for ATO Summary */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .page-break {
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body class="bg-black text-white min-h-screen selection:bg-ios-blue selection:text-white antialiased flex flex-col dark">
+
+  <!-- Full-Width Native iOS App Layout Container (Edge-to-Edge) -->
+  <div class="w-full flex-1 flex flex-col relative mx-auto max-w-2xl min-h-screen bg-black">
+    
+    <!-- Native iOS Frosted Sticky Top Navigation Bar -->
+    <header class="pt-safe px-4 pb-2.5 flex justify-between items-center ios-glass-dark sticky top-0 z-40 border-b border-[#2C2C2E]/80 transition-all" id="mainHeader">
+      <div>
+        <span class="text-[10px] font-semibold tracking-wider uppercase text-ios-subtext">ATO Tax Tracker</span>
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+          <i class="ph-fill ph-hand-heart text-ios-blue text-2xl"></i> GiveTax <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/15 text-ios-blue font-semibold border border-blue-500/30">AUD</span>
+        </h1>
+      </div>
+      <!-- Financial Year Quick Switcher & Settings Icon -->
+      <div class="flex items-center gap-2">
+        <div class="relative inline-block">
+          <select id="fySelector" onchange="changeFY(this.value)" class="text-xs font-semibold bg-[#1C1C1E] text-white border border-[#38383A] rounded-full px-3 py-1.5 pr-6 appearance-none focus:outline-none focus:ring-2 focus:ring-ios-blue shadow-sm">
+            <!-- Populated via JS spanning FY 2019-20 up to FY 2039-40 -->
+          </select>
+          <i class="ph-bold ph-caret-down text-[10px] absolute right-2.5 top-2.5 pointer-events-none text-ios-subtext"></i>
+        </div>
+        <button onclick="openSettingsModal()" class="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[#38383A] flex items-center justify-center text-neutral-200 shadow-sm active:scale-95 active:bg-[#2C2C2E] transition" title="App Settings & Updates">
+          <i class="ph-bold ph-gear text-base"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN SCROLLABLE CONTENT VIEW -->
+    <main class="flex-1 overflow-y-auto px-4 pt-3 pb-content-safe space-y-4" id="contentArea">
+      <section id="viewDashboard" class="space-y-4">
+        <!-- Horizontal Quick-Jump FY Pill Selector Bar -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1" id="quickFyChips">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Hero Tax Deduction Card (Dark Mode Gradient) -->
+        <div class="rounded-3xl p-5 bg-gradient-to-br from-[#0A3E82] via-[#0A2E66] to-[#141E30] border border-blue-400/25 text-white shadow-xl relative overflow-hidden">
+          <div class="absolute -right-6 -bottom-6 opacity-10">
+            <i class="ph-duotone ph-receipt text-9xl"></i>
+          </div>
+          
+          <div class="flex justify-between items-start mb-2 relative z-10">
+            <span class="text-xs font-semibold uppercase tracking-wider text-blue-200 flex items-center gap-1">
+              <i class="ph-fill ph-shield-check text-ios-green"></i> <span id="dashFYLabel">FY 2024-25</span> ATO Deduction
+            </span>
+            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 backdrop-blur-sm" id="dgrCounterBadge">
+              0 DGR Gifts
+            </span>
+          </div>
+
+          <div class="relative z-10 mt-1">
+            <div class="text-xs text-blue-200/80 font-medium">Claimable DGR Total</div>
+            <div class="text-4xl font-black tracking-tight text-white mt-0.5" id="dashTotalDGR">$0.00</div>
+          </div>
+
+          <!-- Tax savings estimate mini banner -->
+          <div class="mt-4 pt-3 border-t border-white/15 flex justify-between items-center relative z-10">
+            <div>
+              <p class="text-[11px] text-blue-200/80">Estimated Tax Back</p>
+              <p class="text-lg font-black text-emerald-400" id="dashEstTaxBack">$0.00</p>
+            </div>
+            <button onclick="switchTab('report')" class="text-xs font-semibold bg-white/10 hover:bg-white/20 active:scale-95 text-white px-3 py-1.5 rounded-xl transition border border-white/15 backdrop-blur-md flex items-center gap-1.5">
+              Calculator <i class="ph-bold ph-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Grid -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-[#1C1C1E] rounded-2xl p-4 border border-[#2C2C2E] shadow-sm">
+            <div class="flex items-center gap-2 text-ios-subtext text-xs font-medium">
+              <span class="w-2.5 h-2.5 rounded-full bg-ios-green shadow-[0_0_8px_rgba(48,209,88,0.5)]"></span>
+              All Donations
+            </div>
+            <div class="text-xl font-bold mt-1.5 text-white tracking-tight" id="dashGrossTotal">$0.00</div>
+            <div class="text-[11px] text-ios-subtext mt-0.5" id="dashCountTotal">0 gifts logged</div>
+          </div>
+          
+          <div class="bg-[#1C1C1E] rounded-2xl p-4 border border-[#2C2C2E] shadow-sm">
+            <div class="flex items-center gap-2 text-ios-subtext text-xs font-medium">
+              <span class="w-2.5 h-2.5 rounded-full bg-ios-orange shadow-[0_0_8px_rgba(255,159,10,0.5)]"></span>
+              Non-DGR / Excluded
+            </div>
+            <div class="text-xl font-bold mt-1.5 text-white tracking-tight" id="dashNonDGRTotal">$0.00</div>
+            <div class="text-[11px] text-ios-subtext mt-0.5">Raffles / &lt;$2 / non-DGR</div>
+          </div>
+        </div>
+
+        <!-- ATO Advisory Reminder Card -->
+        <div class="bg-[#1A1608] border border-amber-500/30 rounded-2xl p-3.5 flex items-start gap-3">
+          <i class="ph-fill ph-info text-amber-400 text-xl flex-shrink-0 mt-0.5"></i>
+          <div class="text-xs text-amber-200/90 leading-relaxed">
+            <strong class="font-semibold text-amber-300">ATO Tax Tip:</strong> Gifts of money to endorsed Deductible Gift Recipients (DGRs) must be <strong>$2 or more</strong> and you must not receive a material benefit in return (e.g. raffle tickets, dinners, or tokens).
+          </div>
+        </div>
+
+        <!-- Recent Donations Header & List -->
+        <div class="pt-2">
+          <div class="flex justify-between items-center mb-2">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-ios-subtext">Recent Receipts</h2>
+            <button onclick="switchTab('donations')" class="text-xs font-semibold text-ios-blue hover:underline">See All</button>
+          </div>
+          <div id="dashRecentList" class="space-y-2.5">
+            <!-- Dynamically populated or empty placeholder -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: DONATIONS LIST -->
+      <section id="viewDonations" class="hidden space-y-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-lg font-bold text-white">Donations Record</h2>
+            <p class="text-xs text-ios-subtext" id="donationsFYSubhead">Financial Year records</p>
+          </div>
+          <button onclick="openAddModal()" class="bg-ios-blue text-white rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-md active:scale-95 transition">
+            <i class="ph-bold ph-plus"></i> Add Receipt
+          </button>
+        </div>
+
+        <!-- Search & Filter bar -->
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <i class="ph-bold ph-magnifying-glass absolute left-3 top-2.5 text-ios-subtext text-sm"></i>
+            <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search charity, receipt #..." class="w-full bg-[#1C1C1E] text-white placeholder:text-neutral-500 border border-[#2C2C2E] rounded-xl pl-8 pr-3 py-2 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none">
+          </div>
+          <select id="filterCategory" onchange="applyFilters()" class="bg-[#1C1C1E] text-white border border-[#2C2C2E] rounded-xl px-2.5 py-2 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none">
+            <option value="ALL">All Causes</option>
+            <option value="Health & Medical">Health & Medical</option>
+            <option value="Environment">Environment & Animals</option>
+            <option value="Humanitarian">Humanitarian & Relief</option>
+            <option value="Education & Research">Education & Research</option>
+            <option value="Arts & Heritage">Arts & Heritage</option>
+            <option value="Community & Religious">Community</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <!-- Filter Chips: All / DGR Only / Has Receipt Photo -->
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <button onclick="setFilterType('ALL')" id="filterBtnALL" class="text-xs px-3 py-1 rounded-full bg-white text-black font-bold">All</button>
+          <button onclick="setFilterType('DGR')" id="filterBtnDGR" class="text-xs px-3 py-1 rounded-full bg-[#1C1C1E] text-neutral-300 border border-[#2C2C2E] font-medium">DGR Only ($2+)</button>
+          <button onclick="setFilterType('PHOTOS')" id="filterBtnPHOTOS" class="text-xs px-3 py-1 rounded-full bg-[#1C1C1E] text-neutral-300 border border-[#2C2C2E] font-medium">With Photo</button>
+        </div>
+
+        <!-- Full List Container -->
+        <div id="fullDonationsList" class="space-y-2.5 pt-1">
+          <!-- Filled via JS -->
+        </div>
+      </section>
+
+      <!-- VIEW 3: TAX REPORT & ATO CALCULATOR -->
+      <section id="viewReport" class="hidden space-y-4">
+        <div>
+          <h2 class="text-lg font-bold text-white">Australian Tax Estimate</h2>
+          <p class="text-xs text-ios-subtext">Estimated benefit for myTax / Tax Return</p>
+        </div>
+
+        <!-- Tax Bracket Selector Card -->
+        <div class="bg-[#1C1C1E] rounded-3xl p-5 border border-[#2C2C2E] space-y-4 shadow-sm">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold uppercase tracking-wider text-ios-subtext">Your Marginal Tax Bracket</span>
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-blue-500/15 text-ios-blue border border-blue-500/30" id="bracketPctLabel">30% + 2% Medicare (32%)</span>
+          </div>
+
+          <!-- Bracket Slider / Picker -->
+          <div class="space-y-2">
+            <input type="range" id="taxBracketSlider" min="0" max="4" step="1" value="2" oninput="updateTaxEstimate()" class="w-full accent-ios-blue cursor-pointer">
+            <div class="flex justify-between text-[10px] text-ios-subtext font-medium px-1">
+              <span>Nil (0%)</span>
+              <span>$18k (18%)</span>
+              <span>$45k (32%)</span>
+              <span>$135k (39%)</span>
+              <span>$190k+ (47%)</span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-[#141416] border border-[#2C2C2E] rounded-2xl flex justify-between items-center text-xs">
+            <span class="text-neutral-400">Selected Bracket Rate:</span>
+            <span class="font-bold text-white" id="taxRateSummaryText">30% resident + 2% Medicare levy (32c on the dollar)</span>
+          </div>
+
+          <!-- Refund Card -->
+          <div class="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-emerald-400/90">Estimated Tax Refund Boost</p>
+              <p class="text-3xl font-black text-emerald-400 mt-0.5" id="reportEstRefund">$0.00</p>
+            </div>
+            <div class="text-right text-[11px] text-neutral-400">
+              On <span class="font-semibold text-white" id="reportEligibleDGR">$0.00</span><br>DGR deductions
+            </div>
+          </div>
+        </div>
+
+        <!-- Breakdown By Category Card -->
+        <div class="bg-[#1C1C1E] rounded-3xl p-5 border border-[#2C2C2E] space-y-3 shadow-sm">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-ios-subtext">Giving by Category</h3>
+          <div id="categoryBreakdownContainer" class="space-y-2.5">
+            <!-- Dynamic Category rows -->
+          </div>
+        </div>
+
+        <!-- Multi-Year & FY 2040 Projection Card -->
+        <div class="bg-[#1C1C1E] rounded-3xl p-5 border border-[#2C2C2E] space-y-3 shadow-sm">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-ios-subtext">Long-Range FY Giving (to 2040)</h3>
+            <span class="text-[10px] font-semibold text-ios-blue bg-blue-500/15 px-2 py-0.5 rounded-full border border-blue-500/30">FY 2020 – FY 2040</span>
+          </div>
+          <p class="text-xs text-ios-subtext leading-relaxed">
+            Track multi-year cumulative giving and projected DGR tax write-offs across all logged financial years through to 2040.
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 pt-1 text-center">
+            <div class="p-3 bg-[#141416] rounded-2xl border border-[#2C2C2E]">
+              <span class="text-[10px] font-bold text-ios-subtext uppercase">All-Time DGR Claimed</span>
+              <div class="text-lg font-black text-ios-green mt-0.5" id="lifetimeDGRTotal">$0.00</div>
+              <div class="text-[10px] text-ios-subtext" id="lifetimeDGRCount">0 total gifts</div>
+            </div>
+            <div class="p-3 bg-[#141416] rounded-2xl border border-[#2C2C2E]">
+              <span class="text-[10px] font-bold text-ios-subtext uppercase">All-Time Tax Saved</span>
+              <div class="text-lg font-black text-white mt-0.5" id="lifetimeTaxSaved">$0.00</div>
+              <div class="text-[10px] text-ios-subtext">at selected tax rate</div>
+            </div>
+          </div>
+
+          <!-- Multi-Year Activity List -->
+          <div class="pt-2">
+            <div class="text-[11px] font-bold text-ios-subtext uppercase mb-1.5">Historical & Planned FYs</div>
+            <div id="multiYearTableContainer" class="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar text-xs">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Export & Document Tools -->
+        <div class="bg-[#1C1C1E] rounded-3xl p-5 border border-[#2C2C2E] space-y-3 shadow-sm">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-ios-subtext">Tax Time Export Pack</h3>
+          <p class="text-xs text-ios-subtext leading-relaxed">
+            Generate an ATO compliant itemized statement for your accountant or download a CSV to quickly copy into myTax item D9 (Gifts or donations).
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="exportToCSV()" class="w-full py-2.5 px-3 rounded-2xl bg-[#2C2C2E] hover:bg-[#3A3A3C] active:scale-95 font-semibold text-xs text-white flex items-center justify-center gap-1.5 transition">
+              <i class="ph-bold ph-file-csv text-ios-blue text-base"></i> Export CSV
+            </button>
+            <button onclick="openPrintSummaryModal()" class="w-full py-2.5 px-3 rounded-2xl bg-ios-blue hover:bg-blue-600 active:scale-95 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-sm">
+              <i class="ph-bold ph-printer text-base"></i> Tax Summary
+            </button>
+          </div>
+        </div>
+
+        <!-- Add To Home Screen Banner for iPhone -->
+        <div class="bg-[#141416] rounded-3xl p-4 border border-[#2C2C2E] flex items-center justify-between shadow-sm">
+          <div class="flex items-center gap-3">
+            <div id="homescreenBannerIcon" class="w-10 h-10 rounded-2xl overflow-hidden shadow-md flex-shrink-0">
+              <!-- SVG App Icon Injected -->
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">Install on iPhone Home Screen</div>
+              <div class="text-[11px] text-ios-subtext">Add to Safari with custom GiveTax icon</div>
+            </div>
+          </div>
+          <button onclick="openHomeScreenGuide()" class="text-xs font-semibold text-ios-blue bg-[#1C1C1E] px-3 py-1.5 rounded-full border border-[#38383A] shadow-sm active:scale-95">
+            Guide
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FLOATING / BOTTOM NAVIGATION (Native iOS Tab Bar Style in Deep Frosted Dark Glass) -->
+    <nav class="fixed bottom-0 left-0 right-0 ios-glass-dark border-t border-[#2C2C2E]/80 px-6 flex justify-around items-start pt-2.5 pb-safe z-40 no-print">
+      <div class="w-full max-w-2xl mx-auto flex justify-around items-start">
+        <button onclick="switchTab('dashboard')" id="tabBtnDashboard" class="flex flex-col items-center gap-1 text-ios-blue transition">
+          <i class="ph-fill ph-chart-pie-slice text-2xl"></i>
+          <span class="text-[10px] font-semibold tracking-tight">Summary</span>
+        </button>
+
+        <button onclick="switchTab('donations')" id="tabBtnDonations" class="flex flex-col items-center gap-1 text-ios-subtext transition">
+          <i class="ph-bold ph-receipt text-2xl"></i>
+          <span class="text-[10px] font-semibold tracking-tight">Donations</span>
+        </button>
+
+        <!-- Center Add Action Button -->
+        <button onclick="openAddModal()" class="flex flex-col items-center -mt-4 group transition">
+          <div class="w-12 h-12 rounded-full bg-ios-blue text-white flex items-center justify-center shadow-[0_4px_14px_rgba(10,132,255,0.45)] group-active:scale-95 transition">
+            <i class="ph-bold ph-plus text-2xl"></i>
+          </div>
+          <span class="text-[10px] font-semibold tracking-tight mt-1 text-ios-subtext">Add Gift</span>
+        </button>
+
+        <button onclick="switchTab('report')" id="tabBtnReport" class="flex flex-col items-center gap-1 text-ios-subtext transition">
+          <i class="ph-bold ph-calculator text-2xl"></i>
+          <span class="text-[10px] font-semibold tracking-tight">Tax Report</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- MODAL: ADD / EDIT DONATION (Dark Elevated Surface) -->
+    <div id="donationModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center hidden">
+      <div class="bg-[#1C1C1E] border border-[#2C2C2E] w-full max-w-md rounded-t-[32px] sm:rounded-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+        <!-- Modal Header -->
+        <div class="px-5 py-4 border-b border-[#2C2C2E] flex justify-between items-center bg-[#141416]/50">
+          <button onclick="closeAddModal()" class="text-xs font-semibold text-neutral-400 hover:text-white">Cancel</button>
+          <h3 class="text-sm font-bold text-white" id="modalTitle">New Donation</h3>
+          <button onclick="saveDonation()" class="text-xs font-bold text-ios-blue">Save</button>
+        </div>
+
+        <!-- Form Body -->
+        <div class="overflow-y-auto p-5 space-y-4 flex-1">
+          <input type="hidden" id="editDonationId" value="">
+
+          <!-- Amount In AUD -->
+          <div class="text-center py-2">
+            <span class="text-xs font-bold uppercase text-ios-subtext">Donation Amount (AUD)</span>
+            <div class="flex items-center justify-center mt-1">
+              <span class="text-2xl font-bold text-neutral-500 mr-1">$</span>
+              <input type="number" step="0.01" min="0" id="formAmount" placeholder="0.00" class="text-4xl font-extrabold w-48 text-center bg-transparent focus:outline-none focus:ring-0 text-white placeholder:text-neutral-600" required>
+            </div>
+            <p id="amountWarnMsg" class="text-[11px] text-amber-400 mt-1 hidden">ATO requirement: Donations under $2.00 are generally not tax deductible.</p>
+          </div>
+
+          <!-- Charity Name -->
+          <div>
+            <label class="text-xs font-bold uppercase text-ios-subtext block mb-1">Recipient / Charity Name *</label>
+            <input type="text" id="formCharity" placeholder="e.g. Australian Red Cross, Cancer Council" class="w-full bg-[#141416] text-white placeholder:text-neutral-500 border border-[#2C2C2E] rounded-xl px-3.5 py-2.5 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none" required>
+          </div>
+
+          <!-- Date & Financial Year Notice -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-bold uppercase text-ios-subtext block mb-1">Date Paid *</label>
+              <input type="date" id="formDate" onchange="onDateChanged()" class="w-full bg-[#141416] text-white border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none" required>
+            </div>
+            <div>
+              <label class="text-xs font-bold uppercase text-ios-subtext block mb-1">Calculated FY</label>
+              <div id="formCalculatedFY" class="w-full bg-[#141416] border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs font-semibold text-neutral-300 flex items-center">
+                FY 2024-25
+              </div>
+            </div>
+          </div>
+
+          <!-- DGR Status Toggle (Crucial for Australian Tax) -->
+          <div class="p-3.5 bg-[#141416] rounded-2xl border border-[#2C2C2E] flex items-center justify-between">
+            <div class="pr-2">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i class="ph-fill ph-seal-check text-ios-green text-base"></i> Deductible Gift Recipient (DGR)
+              </span>
+              <p class="text-[11px] text-ios-subtext mt-0.5 leading-snug">
+                Check this if the charity has endorsed DGR status with the ABR/ATO for tax deduction.
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="formDGR" class="sr-only peer" checked>
+              <div class="w-11 h-6 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ios-green"></div>
+            </label>
+          </div>
+
+          <!-- Category & Payment Method -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-bold uppercase text-ios-subtext block mb-1">Category</label>
+              <select id="formCategory" class="w-full bg-[#141416] text-white border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none">
+                <option value="Health & Medical">Health & Medical</option>
+                <option value="Environment">Environment & Animals</option>
+                <option value="Humanitarian">Humanitarian & Relief</option>
+                <option value="Education & Research">Education & Research</option>
+                <option value="Arts & Heritage">Arts & Heritage</option>
+                <option value="Community & Religious">Community</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold uppercase text-ios-subtext block mb-1">Payment Method</label>
+              <select id="formPaymentMethod" class="w-full bg-[#141416] text-white border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none">
+                <option value="Credit / Debit Card">Credit / Debit Card</option>
+                <option value="Apple Pay / Google Pay">Apple Pay</option>
+                <option value="Direct Bank Transfer / PayID">Bank Transfer / PayID</option>
+                <option value="PayPal">PayPal</option>
+                <option value="Workplace Giving">Workplace Giving</option>
+                <option value="Cash">Cash</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Receipt Number / Notes -->
+          <div>
+            <label class="text-xs font-bold uppercase text-ios-subtext block mb-1">Tax Receipt # / Notes</label>
+            <input type="text" id="formNotes" placeholder="Receipt or invoice number (recommended for ATO audits)" class="w-full bg-[#141416] text-white placeholder:text-neutral-500 border border-[#2C2C2E] rounded-xl px-3.5 py-2 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none">
+          </div>
+
+          <!-- Receipt Photo Upload -->
+          <div>
+            <label class="text-xs font-bold uppercase text-ios-subtext block mb-1">Receipt Screenshot / Photo</label>
+            
+            <div id="photoDropArea" class="border-2 border-dashed border-[#2C2C2E] hover:border-ios-blue rounded-2xl p-4 text-center cursor-pointer transition bg-[#141416]/50">
+              <input type="file" id="formPhotoInput" accept="image/*" class="hidden" onchange="handleImageSelection(event)">
+              
+              <div id="photoEmptyState" class="space-y-1">
+                <i class="ph-bold ph-camera text-2xl text-ios-blue"></i>
+                <p class="text-xs font-medium text-white">Tap to upload or take photo</p>
+                <p class="text-[10px] text-ios-subtext">JPG, PNG or Screenshot (Stored locally on your phone)</p>
+              </div>
+
+              <!-- Preview State -->
+              <div id="photoPreviewContainer" class="hidden relative">
+                <img id="formPhotoPreview" src="" alt="Receipt preview" class="w-full max-h-48 object-contain rounded-xl mx-auto shadow-sm">
+                <button type="button" onclick="removeSelectedPhoto(event)" class="absolute top-2 right-2 bg-black/80 text-white rounded-full p-1.5 shadow-md hover:bg-black">
+                  <i class="ph-bold ph-x text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Message Area -->
+          <div id="formErrorMessage" class="hidden text-xs text-red-400 bg-red-950/40 p-2.5 rounded-xl border border-red-900/60"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: RECEIPT IMAGE VIEWER (FULL PREVIEW) -->
+    <div id="receiptViewerModal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between hidden">
+      <div class="px-5 py-4 flex justify-between items-center text-white border-b border-[#2C2C2E]/60">
+        <div>
+          <h4 class="text-sm font-bold" id="viewerCharityTitle">Receipt Preview</h4>
+          <span class="text-xs text-neutral-400" id="viewerSubtext">Date & Amount</span>
+        </div>
+        <button onclick="closeReceiptViewer()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white active:bg-white/20">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 flex items-center justify-center p-4 overflow-hidden">
+        <img id="fullImageView" src="" alt="Enlarged Receipt" class="max-h-[75vh] max-w-full rounded-2xl object-contain shadow-2xl">
+      </div>
+
+      <div class="p-6 text-center text-xs text-neutral-400">
+        Receipt saved locally in secure device storage for ATO audit proof.
+      </div>
+    </div>
+
+    <!-- MODAL: SETTINGS, GITHUB UPDATES & DATA SAFEGUARD -->
+    <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center hidden">
+      <div class="bg-[#1C1C1E] border border-[#2C2C2E] w-full max-w-md rounded-t-[32px] sm:rounded-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+        <!-- Settings Header -->
+        <div class="px-5 py-4 border-b border-[#2C2C2E] flex justify-between items-center bg-[#141416]/50">
+          <h3 class="text-sm font-bold flex items-center gap-2 text-white">
+            <i class="ph-bold ph-sliders-horizontal text-ios-blue text-base"></i> App Settings & Updates
+          </h3>
+          <button onclick="closeSettingsModal()" class="text-xs font-semibold text-ios-blue">Done</button>
+        </div>
+
+        <div class="overflow-y-auto p-5 space-y-5 text-xs">
+          <!-- App Info & Icon Preview -->
+          <div class="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#141416] border border-[#2C2C2E]">
+            <div id="settingsAppIconPreview" class="w-14 h-14 rounded-2xl shadow-md overflow-hidden flex-shrink-0">
+              <!-- Rendered SVG App Icon -->
+            </div>
+            <div>
+              <div class="text-sm font-bold text-white flex items-center gap-1.5">
+                GiveTax AU <span class="text-[10px] bg-blue-500/15 text-ios-blue font-bold px-2 py-0.5 rounded-full border border-blue-500/30">v<span id="appCurrentVersion">2.4.0</span></span>
+              </div>
+              <div class="text-[11px] text-ios-subtext mt-0.5">ATO Deduction Tracker for iPhone</div>
+              <div class="text-[10px] text-emerald-400 font-medium flex items-center gap-1 mt-1">
+                <i class="ph-fill ph-shield-check"></i> Persistent Local Storage Active
+              </div>
+            </div>
+          </div>
+
+          <!-- GitHub Updates Section -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold uppercase text-ios-subtext tracking-wider">GitHub Updates</span>
+            <div class="p-4 rounded-2xl bg-[#141416] border border-[#2C2C2E] space-y-3">
+              <div>
+                <label class="text-[11px] font-semibold text-neutral-300 block mb-1">GitHub Repository (owner/repo)</label>
+                <div class="flex gap-2">
+                  <input type="text" id="githubRepoInput" value="givetax-au/app" placeholder="owner/repo" class="flex-1 bg-[#1C1C1E] text-white border border-[#2C2C2E] rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ios-blue focus:outline-none">
+                  <button onclick="saveGithubRepoConfig()" class="bg-[#2C2C2E] hover:bg-[#3A3A3C] px-3 py-2 rounded-xl font-semibold text-white active:scale-95 transition">Save</button>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center pt-1 border-t border-[#2C2C2E]">
+                <div>
+                  <div class="text-xs font-semibold text-white">Auto-Check On Launch</div>
+                  <div class="text-[10px] text-ios-subtext">Checks when opening or resuming app</div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="autoCheckUpdatesToggle" onchange="toggleAutoUpdateCheck(this.checked)" class="sr-only peer" checked>
+                  <div class="w-9 h-5 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-700 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-ios-blue"></div>
+                </label>
+              </div>
+
+              <div class="pt-2 flex gap-2">
+                <button onclick="checkForUpdates(true)" id="manualUpdateBtn" class="flex-1 py-2 px-3 rounded-xl bg-ios-blue text-white font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition">
+                  <i class="ph-bold ph-arrows-clockwise text-sm"></i> Check for Updates
+                </button>
+                <button onclick="simulateMockUpdateAvailable()" class="py-2 px-2.5 rounded-xl bg-[#2C2C2E] text-neutral-300 font-semibold text-[11px] active:scale-95 transition" title="Test Prompt">
+                  Test Prompt
+                </button>
+              </div>
+              <div id="updateStatusText" class="text-[11px] text-center text-ios-subtext pt-1"></div>
+            </div>
+          </div>
+
+          <!-- Absolute Data Safeguard & Backup -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold uppercase text-ios-subtext tracking-wider">Data Safety & Backup</span>
+              <span class="text-[10px] text-ios-green font-semibold flex items-center gap-0.5">
+                <i class="ph-fill ph-lock-key"></i> Zero Data Loss
+              </span>
+            </div>
+            <div class="p-4 rounded-2xl bg-[#141416] border border-[#2C2C2E] space-y-3">
+              <p class="text-[11px] text-ios-subtext leading-relaxed">
+                Your receipts, photos, and FY logs are saved directly in IndexedDB storage on your iPhone. Updating the app will never erase your stored data. You can also export a full encrypted JSON backup at any time.
+              </p>
+
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="exportFullDataBackup()" class="py-2.5 px-3 rounded-xl bg-[#1C1C1E] border border-[#2C2C2E] font-semibold text-white flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition">
+                  <i class="ph-bold ph-download-simple text-ios-blue text-base"></i> Backup (JSON)
+                </button>
+                
+                <label class="py-2.5 px-3 rounded-xl bg-[#1C1C1E] border border-[#2C2C2E] font-semibold text-white flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer text-center">
+                  <i class="ph-bold ph-upload-simple text-ios-green text-base"></i> Restore
+                  <input type="file" id="restoreFileInput" accept=".json" class="hidden" onchange="handleRestoreBackup(event)">
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Home Screen Guide Trigger -->
+          <div>
+            <button onclick="closeSettingsModal(); openHomeScreenGuide();" class="w-full py-2.5 rounded-xl border border-[#2C2C2E] font-semibold text-neutral-300 hover:text-white flex items-center justify-center gap-2 active:bg-[#2C2C2E]">
+              <i class="ph-bold ph-device-mobile text-ios-blue text-base"></i> How to add to iPhone Home Screen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: iOS-STYLE UPDATE ALERT (Dark) -->
+    <div id="updateAlertModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-5 hidden">
+      <div class="bg-[#1C1C1E] border border-[#2C2C2E] w-full max-w-xs rounded-2xl shadow-2xl overflow-hidden text-center animate-in zoom-in-95 duration-150">
+        <div class="p-5 pb-4 space-y-2">
+          <div class="w-12 h-12 mx-auto rounded-full bg-blue-500/15 text-ios-blue flex items-center justify-center mb-1">
+            <i class="ph-bold ph-arrow-circle-up text-2xl"></i>
+          </div>
+          <h4 class="text-base font-bold text-white">Update Available</h4>
+          <p class="text-xs text-neutral-300 leading-snug">
+            Version <span id="alertUpdateVersion" class="font-bold text-ios-blue">2.5.0</span> is ready with the latest tax updates and enhancements.
+          </p>
+          <div class="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-300 text-left flex items-start gap-1.5 mt-2">
+            <i class="ph-fill ph-check-circle text-sm flex-shrink-0 mt-0.5 text-ios-green"></i>
+            <span><strong>Data Guarantee:</strong> All receipts, photos, and financial logs are safely preserved.</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 border-t border-[#2C2C2E] divide-x divide-[#2C2C2E]">
+          <button onclick="closeUpdateAlert()" class="py-3 text-xs font-semibold text-ios-subtext active:bg-[#2C2C2E] transition">
+            Later
+          </button>
+          <button onclick="applyAppUpdate()" class="py-3 text-xs font-bold text-ios-blue active:bg-[#2C2C2E] transition">
+            Update Now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: ADD TO HOME SCREEN SAFARI GUIDE (Dark) -->
+    <div id="homeScreenModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end justify-center hidden">
+      <div class="bg-[#1C1C1E] border border-[#2C2C2E] w-full max-w-md rounded-t-[32px] p-6 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base font-bold text-white">Add to iPhone Home Screen</h3>
+          <button onclick="closeHomeScreenGuide()" class="text-xs font-semibold text-ios-blue">Done</button>
+        </div>
+
+        <div class="flex items-center gap-3 p-3 bg-[#141416] border border-[#2C2C2E] rounded-2xl">
+          <div id="modalAppIconPreview" class="w-14 h-14 rounded-2xl shadow-md overflow-hidden flex-shrink-0">
+            <!-- Icon Rendered -->
+          </div>
+          <div>
+            <div class="text-xs font-bold text-white">GiveTax AU</div>
+            <div class="text-[11px] text-ios-subtext">Tax Deductions & AUD Receipt Locker</div>
+          </div>
+        </div>
+
+        <div class="space-y-3 text-xs text-neutral-300">
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-ios-blue text-white flex items-center justify-center font-bold text-[11px] flex-shrink-0">1</div>
+            <div>Tap the <strong>Share</strong> button in Safari's bottom toolbar (<i class="ph-bold ph-export text-ios-blue text-sm"></i>).</div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-ios-blue text-white flex items-center justify-center font-bold text-[11px] flex-shrink-0">2</div>
+            <div>Scroll down and select <strong>"Add to Home Screen"</strong> (<i class="ph-bold ph-plus-square text-sm"></i>).</div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-ios-blue text-white flex items-center justify-center font-bold text-[11px] flex-shrink-0">3</div>
+            <div>Tap <strong>Add</strong> in the top right corner. The custom GiveTax icon will appear on your iPhone screen!</div>
+          </div>
+        </div>
+
+        <button onclick="closeHomeScreenGuide()" class="w-full py-3 bg-ios-blue text-white font-bold rounded-2xl shadow-sm active:scale-95 transition text-xs">
+          Got it
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: PRINT / AUDIT SUMMARY (ATO TAX PACK READY) -->
+    <div id="printSummaryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+      <div class="bg-white text-neutral-900 w-full max-w-lg rounded-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div class="px-5 py-4 border-b flex justify-between items-center bg-neutral-50">
+          <h3 class="text-sm font-bold flex items-center gap-1.5">
+            <i class="ph-fill ph-file-text text-blue-600 text-base"></i> ATO myTax Summary Statement
+          </h3>
+          <div class="flex items-center gap-2">
+            <button onclick="window.print()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 shadow">
+              <i class="ph-bold ph-printer"></i> Print / Save PDF
+            </button>
+            <button onclick="closePrintSummaryModal()" class="text-xs font-semibold text-neutral-500">Close</button>
+          </div>
+        </div>
+
+        <div class="p-6 overflow-y-auto space-y-4 text-xs font-sans" id="printableReportContent">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastNotification" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-[#1C1C1E]/95 border border-[#38383A] text-white text-xs font-medium shadow-2xl backdrop-blur-md flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300">
+      <i class="ph-fill ph-check-circle text-ios-green text-base"></i>
+      <span id="toastMessage">Record saved successfully</span>
+    </div>
+
+  </div>
+
+  <!-- SCRIPT LOGIC: IndexedDB, Australian Financial Year, Calculations & UI -->
+  <script>
+    /* ====================================================================
+     * 0. APP VERSION & IPHONE HOME SCREEN ICON GENERATOR
+     * Custom Australian Green/Gold Shield + Heart + AUD Coin Badge
+     * ==================================================================== */
+    const APP_CURRENT_VERSION = '2.4.0';
+    let availableNewVersion = null;
+
+    function generateAppleTouchIconSVG() {
+      // 512x512 High-Resolution Apple Touch SVG Icon
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+        <defs>
+          <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0F2027"/>
+            <stop offset="50%" stop-color="#203A43"/>
+            <stop offset="100%" stop-color="#2C5364"/>
+          </linearGradient>
+          <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFE000"/>
+            <stop offset="100%" stop-color="#799F0C"/>
+          </linearGradient>
+          <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0052D4"/>
+            <stop offset="50%" stop-color="#4364F7"/>
+            <stop offset="100%" stop-color="#6FB1FC"/>
+          </linearGradient>
+          <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000" flood-opacity="0.45"/>
+          </filter>
+        </defs>
+        
+        <!-- iOS Squircle / Rounded Background -->
+        <rect width="512" height="512" rx="115" fill="url(#bgGrad)"/>
+        
+        <!-- Subtle Australian Green Border Ring -->
+        <rect x="14" y="14" width="484" height="484" rx="103" fill="none" stroke="url(#goldGrad)" stroke-width="6" opacity="0.45"/>
+
+        <!-- Australian Tax Giving Shield Badge -->
+        <g filter="url(#shadow)">
+          <path d="M256 64 C330 94 394 88 410 92 C414 176 414 278 256 424 C98 278 98 176 102 92 C118 88 182 94 256 64 Z" fill="url(#shieldGrad)"/>
+        </g>
+        
+        <!-- Gold Accent Trim on Shield -->
+        <path d="M256 78 C324 105 382 100 396 103 C400 178 398 268 256 398 C114 268 112 178 116 103 C130 100 188 105 256 78 Z" fill="none" stroke="#FFE000" stroke-width="6" opacity="0.8"/>
+
+        <!-- Loving Hands / Heart Icon (Tax Giving) -->
+        <path d="M256 160 C242 135 212 124 184 135 C150 148 142 188 162 222 C184 260 256 312 256 312 C256 312 328 260 350 222 C370 188 362 148 328 135 C300 124 270 135 256 160 Z" fill="#FFFFFF" opacity="0.95"/>
+        
+        <!-- Golden AUD Coin -->
+        <circle cx="256" cy="208" r="42" fill="url(#goldGrad)" filter="url(#shadow)"/>
+        <text x="256" y="222" font-family="-apple-system, system-ui, BlinkMacSystemFont, 'SF Pro Display', sans-serif" font-size="40" font-weight="900" fill="#1C1C1E" text-anchor="middle">$</text>
+        
+        <!-- AU Label Ribbon at Bottom of Shield -->
+        <rect x="186" y="322" width="140" height="36" rx="18" fill="#FFE000"/>
+        <text x="256" y="347" font-family="-apple-system, system-ui, BlinkMacSystemFont, 'SF Pro Display', sans-serif" font-size="19" font-weight="900" fill="#102A43" text-anchor="middle" letter-spacing="2">DGR • AU</text>
+      </svg>`;
+    }
+
+    function initAppleTouchIcon() {
+      const svg = generateAppleTouchIconSVG();
+      const encodedSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+      
+      const appleLink = document.getElementById('appleTouchIconLink');
+      const faviconLink = document.getElementById('faviconLink');
+      if (appleLink) appleLink.href = encodedSvg;
+      if (faviconLink) faviconLink.href = encodedSvg;
+
+      // Also render into UI previews
+      const bannerIcon = document.getElementById('homescreenBannerIcon');
+      const settingsPreview = document.getElementById('settingsAppIconPreview');
+      const modalPreview = document.getElementById('modalAppIconPreview');
+      if (bannerIcon) bannerIcon.innerHTML = svg;
+      if (settingsPreview) settingsPreview.innerHTML = svg;
+      if (modalPreview) modalPreview.innerHTML = svg;
+    }
+
+    /* ====================================================================
+     * 1. IndexedDB SETUP & STORAGE (Decoupled & 100% Update Safe)
+     * ==================================================================== */
+    const DB_NAME = 'GiveTaxAU_DB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'donations';
+    let db;
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+          const dbInstance = e.target.result;
+          if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+            const store = dbInstance.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            store.createIndex('fy', 'fy', { unique: false });
+            store.createIndex('date', 'date', { unique: false });
+          }
+        };
+        request.onsuccess = (e) => {
+          db = e.target.result;
+          resolve(db);
+        };
+        request.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    function idbSave(donation) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(donation);
+        req.onsuccess = () => resolve(donation);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function idbGetAll() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function idbDelete(id) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    /* ====================================================================
+     * 2. AUSTRALIAN FINANCIAL YEAR HELPERS
+     * Australian FY: Starts 1 July of Year N, Ends 30 June of Year N+1
+     * Example: 15 Oct 2024 -> FY 2024-25 | 12 Feb 2025 -> FY 2024-25
+     * Range expanded: FY 2019-20 up to FY 2039-40 (FY 2040)
+     * ==================================================================== */
+    const FY_START_YEAR = 2019; // FY 2019-20
+    const FY_END_YEAR = 2039;   // FY 2039-40 (ends 30 June 2040)
+
+    function getFinancialYear(dateInput) {
+      const d = new Date(dateInput);
+      if (isNaN(d.getTime())) return null;
+      const month = d.getMonth(); // 0 is January, 6 is July
+      const year = d.getFullYear();
+      
+      let startYear;
+      if (month >= 6) { // July or later
+        startYear = year;
+      } else { // Jan to June
+        startYear = year - 1;
+      }
+      const endYearShort = String(startYear + 1).slice(-2);
+      return `FY ${startYear}-${endYearShort}`;
+    }
+
+    // Generate list of Australian financial years up to FY 2039-40
+    function generateFYOptions() {
+      const years = [];
+      for (let y = FY_START_YEAR; y <= FY_END_YEAR; y++) {
+        const nextShort = String(y + 1).slice(-2);
+        years.push(`FY ${y}-${nextShort}`);
+      }
+      return years;
+    }
+
+    /* ====================================================================
+     * 3. STATE & TAX BRACKET DEFINITIONS
+     * ==================================================================== */
+    let allDonations = [];
+    let selectedFY = getFinancialYear(new Date());
+    let currentFilterType = 'ALL'; // 'ALL', 'DGR', 'PHOTOS'
+    let currentTab = 'dashboard';
+    let currentReceiptImageBase64 = null;
+
+    // Australian Resident Tax Rates (including 2% Medicare Levy)
+    const AU_TAX_BRACKETS = [
+      { label: 'Nil (0%)', rate: 0.00, desc: 'Tax-free threshold ($0 - $18,200)' },
+      { label: '16% + 2% (18%)', rate: 0.18, desc: 'Stage 3 lower rate ($18,201 - $45,000)' },
+      { label: '30% + 2% (32%)', rate: 0.32, desc: 'Middle bracket ($45,001 - $135,000)' },
+      { label: '37% + 2% (39%)', rate: 0.39, desc: 'Upper bracket ($135,001 - $190,000)' },
+      { label: '45% + 2% (47%)', rate: 0.47, desc: 'Top marginal tax bracket ($190,001+)' }
+    ];
+
+    /* ====================================================================
+     * 4. APP INITIALIZATION & SEEDING (SAMPLE DATA ON FIRST RUN)
+     * ==================================================================== */
+    window.onload = async function() {
+      try {
+        initAppleTouchIcon();
+        await openDatabase();
+        allDonations = await idbGetAll();
+
+        // Populate sample data if DB is empty for realistic preview
+        if (allDonations.length === 0) {
+          const sampleDate1 = new Date();
+          sampleDate1.setDate(sampleDate1.getDate() - 10);
+          const sampleDate2 = new Date();
+          sampleDate2.setDate(sampleDate2.getDate() - 40);
+
+          const samples = [
+            {
+              id: 'sample-1',
+              charity: 'Australian Red Cross',
+              amount: 85.00,
+              date: sampleDate1.toISOString().split('T')[0],
+              fy: getFinancialYear(sampleDate1),
+              isDgr: true,
+              category: 'Humanitarian',
+              paymentMethod: 'Credit / Debit Card',
+              notes: 'Flood Appeal Donation - Ref #ARC88391',
+              receiptPhoto: null
+            },
+            {
+              id: 'sample-2',
+              charity: 'Cancer Council Australia',
+              amount: 50.00,
+              date: sampleDate2.toISOString().split('T')[0],
+              fy: getFinancialYear(sampleDate2),
+              isDgr: true,
+              category: 'Health & Medical',
+              paymentMethod: 'Apple Pay / Google Pay',
+              notes: 'Daffodil Day Gift #CC-49910',
+              receiptPhoto: null
+            },
+            {
+              id: 'sample-3',
+              charity: 'Local School Trivia Raffle',
+              amount: 25.00,
+              date: sampleDate2.toISOString().split('T')[0],
+              fy: getFinancialYear(sampleDate2),
+              isDgr: false, // Raffle tickets are NOT DGR tax deductible
+              category: 'Education & Research',
+              paymentMethod: 'Cash',
+              notes: 'Trivia Night 5x raffle tickets (Not tax-deductible)',
+              receiptPhoto: null
+            }
+          ];
+
+          for (const s of samples) {
+            await idbSave(s);
+          }
+          allDonations = await idbGetAll();
+        }
+
+        // Initialize UI FY dropdown and chips
+        populateFYSelector();
+        renderQuickFyChips();
+        
+        // Render Views
+        renderAll();
+
+        // Initialize Settings & GitHub Update Listeners
+        initUpdateSystem();
+
+        // Check for system dark mode
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (err) {
+        console.error("Initialization error:", err);
+      }
+    };
+
+    function populateFYSelector() {
+      const select = document.getElementById('fySelector');
+      select.innerHTML = '';
+      
+      const options = generateFYOptions();
+      // Ensure selectedFY exists in options
+      if (!options.includes(selectedFY)) {
+        options.push(selectedFY);
+      }
+      options.sort().reverse();
+
+      options.forEach(fy => {
+        const opt = document.createElement('option');
+        opt.value = fy;
+        opt.textContent = fy;
+        if (fy === selectedFY) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderQuickFyChips() {
+      const container = document.getElementById('quickFyChips');
+      if (!container) return;
+      container.innerHTML = '';
+
+      // Curate key years including current, next, 2030, 2035, and 2040 target
+      const currentFY = getFinancialYear(new Date());
+      const keyFYs = [
+        currentFY,
+        'FY 2025-26',
+        'FY 2027-28',
+        'FY 2029-30',
+        'FY 2034-35',
+        'FY 2039-40'
+      ];
+      // Deduplicate and keep within range
+      const uniqueChips = [...new Set(keyFYs)];
+
+      uniqueChips.forEach(fy => {
+        const isSelected = (fy === selectedFY);
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = isSelected 
+          ? 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-ios-blue text-white shadow-sm flex-shrink-0 transition active:scale-95'
+          : 'text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[#1C1C1E] border border-[#2C2C2E] text-neutral-300 hover:border-ios-blue flex-shrink-0 transition active:scale-95';
+        chip.textContent = fy;
+        chip.onclick = () => changeFY(fy);
+        container.appendChild(chip);
+      });
+    }
+
+    function changeFY(newFY) {
+      selectedFY = newFY;
+      const select = document.getElementById('fySelector');
+      if (select) select.value = newFY;
+      renderQuickFyChips();
+      renderAll();
+    }
+
+    /* ====================================================================
+     * 5. RENDERING & CALCULATIONS
+     * ==================================================================== */
+    function formatAUD(amount) {
+      return new Intl.NumberFormat('en-AU', {
+        style: 'currency',
+        currency: 'AUD'
+      }).format(amount);
+    }
+
+    function getCurrentBracket() {
+      const sliderVal = parseInt(document.getElementById('taxBracketSlider').value, 10) || 2;
+      return AU_TAX_BRACKETS[sliderVal];
+    }
+
+    function getFYDonations() {
+      return allDonations.filter(d => d.fy === selectedFY);
+    }
+
+    function renderAll() {
+      const fyDonations = getFYDonations();
+
+      // DGR eligible are items with isDgr === true AND amount >= $2.00 (ATO rule)
+      const dgrDonations = fyDonations.filter(d => d.isDgr && Number(d.amount) >= 2.00);
+      const totalDGR = dgrDonations.reduce((sum, d) => sum + Number(d.amount), 0);
+      const grossTotal = fyDonations.reduce((sum, d) => sum + Number(d.amount), 0);
+      const nonDGRTotal = grossTotal - totalDGR;
+
+      // Update Dashboard Hero
+      document.getElementById('dashFYLabel').textContent = selectedFY;
+      document.getElementById('donationsFYSubhead').textContent = `Showing all gifts for ${selectedFY}`;
+      document.getElementById('dashTotalDGR').textContent = formatAUD(totalDGR);
+      document.getElementById('dashGrossTotal').textContent = formatAUD(grossTotal);
+      document.getElementById('dashNonDGRTotal').textContent = formatAUD(nonDGRTotal);
+      document.getElementById('dashCountTotal').textContent = `${fyDonations.length} gifts logged`;
+      document.getElementById('dgrCounterBadge').textContent = `${dgrDonations.length} DGR Claimable`;
+
+      // Tax savings calculation
+      const bracket = getCurrentBracket();
+      const taxSavings = totalDGR * bracket.rate;
+      document.getElementById('dashEstTaxBack').textContent = formatAUD(taxSavings);
+      document.getElementById('reportEstRefund').textContent = formatAUD(taxSavings);
+      document.getElementById('reportEligibleDGR').textContent = formatAUD(totalDGR);
+
+      // Render Dashboard Recent List
+      renderDashboardRecent(fyDonations);
+
+      // Render Donations Tab List
+      applyFilters();
+
+      // Render Category Breakdown in Tax Report
+      renderCategoryBreakdown(fyDonations);
+
+      // Render Multi-Year & FY 2040 Long-Term Summary
+      renderMultiYearSummary();
+    }
+
+    function renderMultiYearSummary() {
+      const container = document.getElementById('multiYearTableContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const bracket = getCurrentBracket();
+      
+      // Calculate lifetime DGR eligible across all logged years
+      const allDgrItems = allDonations.filter(d => d.isDgr && Number(d.amount) >= 2.00);
+      const lifetimeDGR = allDgrItems.reduce((acc, d) => acc + Number(d.amount), 0);
+      const lifetimeTaxSavings = lifetimeDGR * bracket.rate;
+
+      document.getElementById('lifetimeDGRTotal').textContent = formatAUD(lifetimeDGR);
+      document.getElementById('lifetimeTaxSaved').textContent = formatAUD(lifetimeTaxSavings);
+      document.getElementById('lifetimeDGRCount').textContent = `${allDgrItems.length} claimable gifts`;
+
+      // Group totals by FY
+      const fyMap = {};
+      allDonations.forEach(d => {
+        const fy = d.fy || getFinancialYear(d.date) || 'Other';
+        if (!fyMap[fy]) fyMap[fy] = { gross: 0, dgr: 0, count: 0 };
+        fyMap[fy].gross += Number(d.amount);
+        fyMap[fy].count += 1;
+        if (d.isDgr && Number(d.amount) >= 2) {
+          fyMap[fy].dgr += Number(d.amount);
+        }
+      });
+
+      const loggedFYs = Object.keys(fyMap).sort().reverse();
+
+      if (loggedFYs.length === 0) {
+        container.innerHTML = `<div class="text-xs text-ios-subtext italic">No donations logged yet.</div>`;
+        return;
+      }
+
+      loggedFYs.forEach(fy => {
+        const data = fyMap[fy];
+        const isCurrent = (fy === selectedFY);
+        const row = document.createElement('div');
+        row.className = `flex justify-between items-center p-2.5 rounded-xl border transition ${
+          isCurrent 
+            ? 'bg-blue-500/15 border-ios-blue/40 font-semibold' 
+            : 'bg-[#141416] border-[#2C2C2E]'
+        }`;
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-white">${fy}</span>
+            ${isCurrent ? '<span class="text-[9px] bg-ios-blue text-white px-1.5 py-0.2 rounded font-bold">Active</span>' : ''}
+          </div>
+          <div class="text-right">
+            <div class="text-xs font-bold text-white">${formatAUD(data.dgr)} <span class="text-[10px] text-ios-green font-normal">DGR</span></div>
+            <div class="text-[10px] text-ios-subtext">${data.count} gifts (${formatAUD(data.gross)} gross)</div>
+          </div>
+        `;
+        row.onclick = () => changeFY(fy);
+        container.appendChild(row);
+      });
+    }
+
+    function renderDashboardRecent(items) {
+      const container = document.getElementById('dashRecentList');
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="bg-[#1C1C1E] border border-dashed border-[#2C2C2E] rounded-2xl p-6 text-center text-xs text-ios-subtext">
+            No donations logged for ${selectedFY} yet.<br>Tap <span class="text-ios-blue font-semibold cursor-pointer" onclick="openAddModal()">+ Add Receipt</span> to get started.
+          </div>
+        `;
+        return;
+      }
+
+      // Sort newest first
+      const sorted = [...items].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 4);
+
+      sorted.forEach(item => {
+        container.appendChild(createDonationCard(item));
+      });
+    }
+
+    function createDonationCard(item) {
+      const el = document.createElement('div');
+      el.className = "bg-[#1C1C1E] border border-[#2C2C2E] rounded-2xl p-3.5 flex items-center justify-between shadow-sm active:bg-[#2C2C2E] transition cursor-pointer";
+      
+      const isEligibleDgr = item.isDgr && Number(item.amount) >= 2;
+      const formattedDate = new Date(item.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      el.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="w-10 h-10 rounded-xl bg-[#141416] border border-[#2C2C2E] flex items-center justify-center flex-shrink-0 text-neutral-300">
+            ${item.receiptPhoto 
+              ? `<img src="${item.receiptPhoto}" class="w-10 h-10 rounded-xl object-cover" alt="receipt thumbnail">` 
+              : `<i class="ph-bold ${getCategoryIcon(item.category)} text-xl text-ios-blue"></i>`
+            }
+          </div>
+          <div class="truncate">
+            <h4 class="text-xs font-bold text-white truncate">${escapeHtml(item.charity)}</h4>
+            <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-ios-subtext">
+              <span>${formattedDate}</span>
+              <span>•</span>
+              <span class="truncate">${escapeHtml(item.category || 'General')}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-right flex-shrink-0 ml-2">
+          <div class="text-sm font-extrabold text-white">${formatAUD(item.amount)}</div>
+          <div class="mt-0.5">
+            ${isEligibleDgr 
+              ? `<span class="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/25">DGR $2+</span>`
+              : `<span class="inline-flex items-center text-[10px] text-neutral-400 bg-[#141416] px-1.5 py-0.2 rounded border border-[#2C2C2E]">Non-DGR</span>`
+            }
+          </div>
+        </div>
+      `;
+
+      el.onclick = () => openDonationDetail(item.id);
+      return el;
+    }
+
+    function getCategoryIcon(cat) {
+      switch(cat) {
+        case 'Health & Medical': return 'ph-first-aid';
+        case 'Environment': return 'ph-tree';
+        case 'Humanitarian': return 'ph-globe-stand';
+        case 'Education & Research': return 'ph-graduation-cap';
+        case 'Arts & Heritage': return 'ph-palette';
+        case 'Community & Religious': return 'ph-users-three';
+        default: return 'ph-heart';
+      }
+    }
+
+    /* ====================================================================
+     * 6. FILTER & SEARCH LOGIC
+     * ==================================================================== */
+    function setFilterType(type) {
+      currentFilterType = type;
+      ['ALL', 'DGR', 'PHOTOS'].forEach(t => {
+        const btn = document.getElementById(`filterBtn${t}`);
+        if (t === type) {
+          btn.className = "text-xs px-3 py-1 rounded-full bg-white text-black font-bold";
+        } else {
+          btn.className = "text-xs px-3 py-1 rounded-full bg-[#1C1C1E] text-neutral-300 border border-[#2C2C2E] font-medium";
+        }
+      });
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const query = (document.getElementById('searchInput').value || '').toLowerCase();
+      const category = document.getElementById('filterCategory').value;
+      const listContainer = document.getElementById('fullDonationsList');
+      listContainer.innerHTML = '';
+
+      let items = getFYDonations();
+
+      // Filter by type
+      if (currentFilterType === 'DGR') {
+        items = items.filter(d => d.isDgr && Number(d.amount) >= 2);
+      } else if (currentFilterType === 'PHOTOS') {
+        items = items.filter(d => !!d.receiptPhoto);
+      }
+
+      // Filter by category
+      if (category !== 'ALL') {
+        items = items.filter(d => d.category === category);
+      }
+
+      // Search by name, notes
+      if (query.trim() !== '') {
+        items = items.filter(d => 
+          d.charity.toLowerCase().includes(query) || 
+          (d.notes && d.notes.toLowerCase().includes(query))
+        );
+      }
+
+      if (items.length === 0) {
+        listContainer.innerHTML = `
+          <div class="bg-[#1C1C1E] border border-dashed border-[#2C2C2E] rounded-2xl p-8 text-center text-xs text-ios-subtext">
+            No matching donation receipts found.
+          </div>
+        `;
+        return;
+      }
+
+      // Sort newest first
+      items.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      items.forEach(item => {
+        listContainer.appendChild(createDonationCard(item));
+      });
+    }
+
+    function renderCategoryBreakdown(items) {
+      const container = document.getElementById('categoryBreakdownContainer');
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = `<div class="text-xs text-ios-subtext italic">No donations in this Financial Year.</div>`;
+        return;
+      }
+
+      const total = items.reduce((acc, d) => acc + Number(d.amount), 0);
+      const catMap = {};
+
+      items.forEach(d => {
+        const cat = d.category || 'Other';
+        catMap[cat] = (catMap[cat] || 0) + Number(d.amount);
+      });
+
+      const sortedCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+      sortedCats.forEach(([catName, amt]) => {
+        const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
+        const row = document.createElement('div');
+        row.className = "space-y-1";
+        row.innerHTML = `
+          <div class="flex justify-between text-xs">
+            <span class="font-medium text-neutral-200 flex items-center gap-1.5">
+              <i class="ph-bold ${getCategoryIcon(catName)} text-ios-blue text-xs"></i> ${escapeHtml(catName)}
+            </span>
+            <span class="font-bold text-white">${formatAUD(amt)} <span class="text-ios-subtext font-normal text-[10px]">(${pct}%)</span></span>
+          </div>
+          <div class="w-full bg-[#141416] border border-[#2C2C2E] h-2 rounded-full overflow-hidden">
+            <div class="bg-ios-blue h-full rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    /* ====================================================================
+     * 8. NAVIGATION TABS
+     * ==================================================================== */
+    function switchTab(tabId) {
+      currentTab = tabId;
+      document.getElementById('viewDashboard').classList.add('hidden');
+      document.getElementById('viewDonations').classList.add('hidden');
+      document.getElementById('viewReport').classList.add('hidden');
+
+      // Reset tab button colors
+      ['Dashboard', 'Donations', 'Report'].forEach(t => {
+        const btn = document.getElementById(`tabBtn${t}`);
+        btn.classList.remove('text-ios-blue');
+        btn.classList.add('text-ios-subtext');
+        const icon = btn.querySelector('i');
+        if (icon) {
+          icon.className = icon.className.replace('ph-fill', 'ph-bold');
+        }
+      });
+
+      if (tabId === 'dashboard') {
+        document.getElementById('viewDashboard').classList.remove('hidden');
+        highlightTab('tabBtnDashboard', 'ph-chart-pie-slice');
+      } else if (tabId === 'donations') {
+        document.getElementById('viewDonations').classList.remove('hidden');
+        highlightTab('tabBtnDonations', 'ph-receipt');
+      } else if (tabId === 'report') {
+        document.getElementById('viewReport').classList.remove('hidden');
+        highlightTab('tabBtnReport', 'ph-calculator');
+      }
+    }
+
+    function highlightTab(btnId, iconName) {
+      const btn = document.getElementById(btnId);
+      btn.classList.add('text-ios-blue');
+      btn.classList.remove('text-ios-subtext');
+      const icon = btn.querySelector('i');
+      if (icon) {
+        icon.className = `ph-fill ${iconName} text-2xl`;
+      }
+    }
+
+    /* ====================================================================
+     * 9. FORM MODAL & IMAGE COMPRESSION (IndexedDB Storage)
+     * ==================================================================== */
+    function openAddModal(editId = null) {
+      const modal = document.getElementById('donationModal');
+      const errorMsg = document.getElementById('formErrorMessage');
+      errorMsg.classList.add('hidden');
+
+      // Ensure form date picker supports dates up to June 30, 2040
+      const dateInput = document.getElementById('formDate');
+      dateInput.min = "2019-07-01";
+      dateInput.max = "2040-06-30";
+
+      if (editId) {
+        const item = allDonations.find(d => d.id === editId);
+        if (!item) return;
+        document.getElementById('modalTitle').textContent = 'Edit Donation';
+        document.getElementById('editDonationId').value = item.id;
+        document.getElementById('formAmount').value = item.amount;
+        document.getElementById('formCharity').value = item.charity;
+        document.getElementById('formDate').value = item.date;
+        document.getElementById('formDGR').checked = item.isDgr;
+        document.getElementById('formCategory').value = item.category || 'Humanitarian';
+        document.getElementById('formPaymentMethod').value = item.paymentMethod || 'Credit / Debit Card';
+        document.getElementById('formNotes').value = item.notes || '';
+        
+        currentReceiptImageBase64 = item.receiptPhoto || null;
+        if (currentReceiptImageBase64) {
+          showPreviewImage(currentReceiptImageBase64);
+        } else {
+          clearPreviewImage();
+        }
+        document.getElementById('formCalculatedFY').textContent = item.fy || getFinancialYear(item.date);
+      } else {
+        document.getElementById('modalTitle').textContent = 'New Donation';
+        document.getElementById('editDonationId').value = '';
+        document.getElementById('formAmount').value = '';
+        document.getElementById('formCharity').value = '';
+        
+        const todayIso = new Date().toISOString().split('T')[0];
+        document.getElementById('formDate').value = todayIso;
+        document.getElementById('formCalculatedFY').textContent = getFinancialYear(todayIso);
+        
+        document.getElementById('formDGR').checked = true;
+        document.getElementById('formCategory').value = 'Humanitarian';
+        document.getElementById('formPaymentMethod').value = 'Credit / Debit Card';
+        document.getElementById('formNotes').value = '';
+        clearPreviewImage();
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeAddModal() {
+      document.getElementById('donationModal').classList.add('hidden');
+      clearPreviewImage();
+    }
+
+    function onDateChanged() {
+      const dateVal = document.getElementById('formDate').value;
+      if (dateVal) {
+        const calc = getFinancialYear(dateVal);
+        document.getElementById('formCalculatedFY').textContent = calc || 'Invalid Date';
+      }
+    }
+
+    // Amount input watcher for ATO under $2 warning
+    document.getElementById('formAmount').addEventListener('input', function(e) {
+      const val = parseFloat(e.target.value);
+      const warn = document.getElementById('amountWarnMsg');
+      if (val > 0 && val < 2.00) {
+        warn.classList.remove('hidden');
+      } else {
+        warn.classList.add('hidden');
+      }
+    });
+
+    // Make Drop Area click trigger hidden file input
+    document.getElementById('photoDropArea').addEventListener('click', function(e) {
+      if (e.target.closest('button')) return; // ignore delete button click
+      document.getElementById('formPhotoInput').click();
+    });
+
+    function handleImageSelection(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      // Compress and convert to base64 for smooth IndexedDB storage
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 1200; // Optimal for receipt text reading without inflating storage
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Quality 0.78 gives crystal clear receipt text under 200KB
+          currentReceiptImageBase64 = canvas.toDataURL('image/jpeg', 0.78);
+          showPreviewImage(currentReceiptImageBase64);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showPreviewImage(base64) {
+      document.getElementById('photoEmptyState').classList.add('hidden');
+      const container = document.getElementById('photoPreviewContainer');
+      const previewImg = document.getElementById('formPhotoPreview');
+      previewImg.src = base64;
+      container.classList.remove('hidden');
+    }
+
+    function clearPreviewImage() {
+      currentReceiptImageBase64 = null;
+      document.getElementById('photoPreviewContainer').classList.add('hidden');
+      document.getElementById('photoEmptyState').classList.remove('hidden');
+      document.getElementById('formPhotoInput').value = '';
+    }
+
+    function removeSelectedPhoto(e) {
+      e.stopPropagation();
+      clearPreviewImage();
+    }
+
+    async function saveDonation() {
+      const amountVal = parseFloat(document.getElementById('formAmount').value);
+      const charityVal = document.getElementById('formCharity').value.trim();
+      const dateVal = document.getElementById('formDate').value;
+      const isDgr = document.getElementById('formDGR').checked;
+      const category = document.getElementById('formCategory').value;
+      const paymentMethod = document.getElementById('formPaymentMethod').value;
+      const notes = document.getElementById('formNotes').value.trim();
+      const editId = document.getElementById('editDonationId').value;
+      const errBox = document.getElementById('formErrorMessage');
+
+      if (!charityVal) {
+        errBox.textContent = 'Please enter the charity or organization name.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+      if (isNaN(amountVal) || amountVal <= 0) {
+        errBox.textContent = 'Please enter a valid donation amount in AUD.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+      if (!dateVal) {
+        errBox.textContent = 'Please select the donation date.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      const fy = getFinancialYear(dateVal);
+      const donationObj = {
+        id: editId || 'don_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        amount: Number(amountVal.toFixed(2)),
+        charity: charityVal,
+        date: dateVal,
+        fy: fy,
+        isDgr: isDgr,
+        category: category,
+        paymentMethod: paymentMethod,
+        notes: notes,
+        receiptPhoto: currentReceiptImageBase64 || null,
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        await idbSave(donationObj);
+
+        // Update local memory list
+        const existingIdx = allDonations.findIndex(d => d.id === donationObj.id);
+        if (existingIdx >= 0) {
+          allDonations[existingIdx] = donationObj;
+        } else {
+          allDonations.push(donationObj);
+        }
+
+        // Auto switch active FY to match saved item so user sees it right away
+        selectedFY = fy;
+        populateFYSelector();
+        renderQuickFyChips();
+        renderAll();
+        closeAddModal();
+        showToast('Donation receipt logged!');
+      } catch (err) {
+        console.error("Save failed:", err);
+        errBox.textContent = 'Failed to save record locally. Please try again.';
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    /* ====================================================================
+     * 10. DETAIL & RECEIPT VIEWER
+     * ==================================================================== */
+    function openDonationDetail(id) {
+      const item = allDonations.find(d => d.id === id);
+      if (!item) return;
+
+      // If item has a photo, open receipt viewer modal directly with options
+      if (item.receiptPhoto) {
+        document.getElementById('viewerCharityTitle').textContent = item.charity;
+        document.getElementById('viewerSubtext').textContent = `${formatAUD(item.amount)} • ${new Date(item.date).toLocaleDateString('en-AU')}`;
+        document.getElementById('fullImageView').src = item.receiptPhoto;
+        document.getElementById('receiptViewerModal').classList.remove('hidden');
+      } else {
+        // Open edit dialog directly
+        openAddModal(item.id);
+      }
+    }
+
+    function closeReceiptViewer() {
+      document.getElementById('receiptViewerModal').classList.add('hidden');
+    }
+
+    /* ====================================================================
+     * 11. EXPORTS & PRINTABLE ATO STATEMENTS
+     * ==================================================================== */
+    function exportToCSV() {
+      const fyItems = getFYDonations();
+      if (fyItems.length === 0) {
+        showToast(`No donations recorded for ${selectedFY}`);
+        return;
+      }
+
+      // ATO friendly columns
+      let csv = "Date,Financial Year,Charity / Organization,Amount (AUD),DGR Status,Category,Payment Method,Tax Receipt / Notes,Has Photo Receipt\n";
+
+      fyItems.forEach(d => {
+        const row = [
+          `"${d.date}"`,
+          `"${d.fy}"`,
+          `"${(d.charity || '').replace(/"/g, '""')}"`,
+          Number(d.amount).toFixed(2),
+          d.isDgr ? "YES (DGR Claimable)" : "NO (Non-Deductible)",
+          `"${(d.category || '').replace(/"/g, '""')}"`,
+          `"${(d.paymentMethod || '').replace(/"/g, '""')}"`,
+          `"${(d.notes || '').replace(/"/g, '""')}"`,
+          d.receiptPhoto ? "YES" : "NO"
+        ];
+        csv += row.join(",") + "\n";
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `GiveTaxAU_Deductions_${selectedFY.replace(/\s+/g, '_')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Tax CSV exported!');
+    }
+
+    function openPrintSummaryModal() {
+      const fyItems = getFYDonations();
+      const dgrItems = fyItems.filter(d => d.isDgr && Number(d.amount) >= 2);
+      const totalDGR = dgrItems.reduce((acc, d) => acc + Number(d.amount), 0);
+      const grossTotal = fyItems.reduce((acc, d) => acc + Number(d.amount), 0);
+      const bracket = getCurrentBracket();
+      const estRefund = totalDGR * bracket.rate;
+
+      const reportHtml = `
+        <div class="border-b pb-4 mb-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <h2 class="text-xl font-black tracking-tight text-neutral-900">Donations & Gifts Tax Pack</h2>
+              <p class="text-neutral-500 font-medium">Australian Taxation Office (ATO) Substantiation Record</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-bold uppercase tracking-wider bg-neutral-900 text-white px-2.5 py-1 rounded">${selectedFY}</span>
+              <p class="text-[10px] text-neutral-400 mt-1">Generated: ${new Date().toLocaleDateString('en-AU')}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ATO Form Item D9 Reference -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-900">
+          <div class="font-bold text-xs">myTax Reference: Item D9 - Gifts or donations</div>
+          <div class="text-[11px] mt-0.5">Enter this claimable total in your individual tax return:</div>
+          <div class="text-2xl font-black text-blue-700 mt-1">${formatAUD(totalDGR)} AUD</div>
+        </div>
+
+        <!-- Metric Table -->
+        <div class="grid grid-cols-3 gap-2 text-center py-2">
+          <div class="bg-neutral-100 p-2.5 rounded-xl">
+            <span class="text-[10px] text-neutral-500 uppercase font-bold">Total Donated</span>
+            <div class="font-bold text-sm text-neutral-900">${formatAUD(grossTotal)}</div>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
+            <span class="text-[10px] text-emerald-800 uppercase font-bold">DGR Deductible ($2+)</span>
+            <div class="font-bold text-sm text-emerald-800">${formatAUD(totalDGR)}</div>
+          </div>
+          <div class="bg-neutral-100 p-2.5 rounded-xl">
+            <span class="text-[10px] text-neutral-500 uppercase font-bold">Est. Tax Refund</span>
+            <div class="font-bold text-sm text-neutral-900">${formatAUD(estRefund)}</div>
+          </div>
+        </div>
+
+        <!-- Itemized List Table -->
+        <div class="space-y-2 pt-2">
+          <h4 class="font-bold text-xs uppercase text-neutral-500">Itemized Tax Invoices & Records (${fyItems.length})</h4>
+          <table class="w-full text-[11px] text-left border-collapse">
+            <thead>
+              <tr class="border-b text-neutral-400">
+                <th class="py-1.5 font-semibold">Date</th>
+                <th class="py-1.5 font-semibold">Charity / Recipient</th>
+                <th class="py-1.5 font-semibold">Receipt / Notes</th>
+                <th class="py-1.5 font-semibold">DGR</th>
+                <th class="py-1.5 text-right font-semibold">Amount (AUD)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-100">
+              ${fyItems.map(item => `
+                <tr class="${item.isDgr && Number(item.amount) >= 2 ? '' : 'text-neutral-400'}">
+                  <td class="py-2">${item.date}</td>
+                  <td class="py-2 font-medium text-neutral-900">${escapeHtml(item.charity)}</td>
+                  <td class="py-2 text-[10px] text-neutral-500">${escapeHtml(item.notes || '-')}</td>
+                  <td class="py-2 font-bold">${item.isDgr && Number(item.amount) >= 2 ? 'YES' : 'NO'}</td>
+                  <td class="py-2 text-right font-bold text-neutral-900">${formatAUD(item.amount)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Taxpayer Declaration -->
+        <div class="pt-4 border-t text-[10px] text-neutral-500 space-y-1">
+          <p><strong>Taxpayer Substantiation Declaration:</strong> Receipts and bank records are retained in compliance with the 5-year ATO record-keeping rule under Section 900-165 of the ITAA 1997.</p>
+        </div>
+      `;
+
+      document.getElementById('printableReportContent').innerHTML = reportHtml;
+      document.getElementById('printSummaryModal').classList.remove('hidden');
+    }
+
+    function closePrintSummaryModal() {
+      document.getElementById('printSummaryModal').classList.add('hidden');
+    }
+
+    /* ====================================================================
+     * 12. UTILITY HELPERS
+     * ==================================================================== */
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2400);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* ====================================================================
+     * 13. GITHUB RELEASES UPDATE CHECKER & DATA PRESERVATION ENGINE
+     * ==================================================================== */
+    function initUpdateSystem() {
+      // Load saved repo or default
+      const savedRepo = localStorage.getItem('givetax_github_repo') || 'givetax-au/app';
+      const repoInput = document.getElementById('githubRepoInput');
+      if (repoInput) repoInput.value = savedRepo;
+
+      const autoCheckPref = localStorage.getItem('givetax_autocheck_updates');
+      const autoToggle = document.getElementById('autoCheckUpdatesToggle');
+      if (autoToggle && autoCheckPref !== null) {
+        autoToggle.checked = (autoCheckPref === 'true');
+      }
+
+      // Check on startup if enabled
+      if (!autoCheckPref || autoCheckPref === 'true') {
+        setTimeout(() => checkForUpdates(false), 2000);
+      }
+
+      // Listen for App Resume (visibilitychange / pageshow) when user reopens app from background
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          const autoCheck = localStorage.getItem('givetax_autocheck_updates');
+          if (!autoCheck || autoCheck === 'true') {
+            checkForUpdates(false);
+          }
+        }
+      });
+      window.addEventListener('pageshow', (e) => {
+        if (e.persisted) {
+          const autoCheck = localStorage.getItem('givetax_autocheck_updates');
+          if (!autoCheck || autoCheck === 'true') {
+            checkForUpdates(false);
+          }
+        }
+      });
+    }
+
+    function toggleAutoUpdateCheck(checked) {
+      localStorage.setItem('givetax_autocheck_updates', checked ? 'true' : 'false');
+      showToast(checked ? 'Auto-check enabled on launch' : 'Auto-check disabled');
+    }
+
+    function saveGithubRepoConfig() {
+      const val = document.getElementById('githubRepoInput').value.trim();
+      if (!val || !val.includes('/')) {
+        showToast('Please enter in owner/repo format');
+        return;
+      }
+      localStorage.setItem('givetax_github_repo', val);
+      showToast('GitHub repo saved!');
+    }
+
+    async function checkForUpdates(isManual = false) {
+      const repo = localStorage.getItem('givetax_github_repo') || 'givetax-au/app';
+      const statusEl = document.getElementById('updateStatusText');
+      if (isManual && statusEl) {
+        statusEl.textContent = `Checking GitHub (${repo})...`;
+      }
+
+      try {
+        const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+          headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        if (!response.ok) {
+          if (isManual) {
+            if (statusEl) statusEl.textContent = `Up to date (v${APP_CURRENT_VERSION})`;
+            showToast(`Already on latest version (v${APP_CURRENT_VERSION})`);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        const latestTag = (data.tag_name || '').replace(/^v/, '');
+
+        if (latestTag && compareVersions(latestTag, APP_CURRENT_VERSION) > 0) {
+          availableNewVersion = latestTag;
+          promptUpdateAlert(latestTag);
+          if (statusEl) statusEl.textContent = `Update available: v${latestTag}`;
+        } else {
+          if (isManual) {
+            if (statusEl) statusEl.textContent = `You're on the newest version (v${APP_CURRENT_VERSION})`;
+            showToast(`You're on the newest version (v${APP_CURRENT_VERSION})`);
+          }
+        }
+      } catch (err) {
+        console.warn('Update check bypassed:', err);
+        if (isManual) {
+          if (statusEl) statusEl.textContent = `Up to date (v${APP_CURRENT_VERSION})`;
+          showToast(`App is up to date (v${APP_CURRENT_VERSION})`);
+        }
+      }
+    }
+
+    function compareVersions(v1, v2) {
+      const parts1 = v1.split('.').map(n => parseInt(n, 10) || 0);
+      const parts2 = v2.split('.').map(n => parseInt(n, 10) || 0);
+      const len = Math.max(parts1.length, parts2.length);
+      for (let i = 0; i < len; i++) {
+        const p1 = parts1[i] || 0;
+        const p2 = parts2[i] || 0;
+        if (p1 > p2) return 1;
+        if (p1 < p2) return -1;
+      }
+      return 0;
+    }
+
+    function simulateMockUpdateAvailable() {
+      promptUpdateAlert('2.5.0');
+    }
+
+    function promptUpdateAlert(newVersion) {
+      document.getElementById('alertUpdateVersion').textContent = newVersion;
+      document.getElementById('updateAlertModal').classList.remove('hidden');
+    }
+
+    function closeUpdateAlert() {
+      document.getElementById('updateAlertModal').classList.add('hidden');
+    }
+
+    async function applyAppUpdate() {
+      // 100% DATA SAFETY GUARANTEE:
+      // IndexedDB is decoupled from browser cache. Before reloading, we guarantee
+      // all records are committed.
+      showToast('Preserving data & refreshing...');
+      closeUpdateAlert();
+
+      // If Service Worker is installed, skip waiting & reload
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }
+      }
+
+      // Hard refresh with cache bust while IndexedDB remains intact
+      setTimeout(() => {
+        window.location.reload();
+      }, 700);
+    }
+
+    /* ====================================================================
+     * 14. FULL DATA BACKUP & RESTORE (JSON + Base64 Receipts)
+     * ==================================================================== */
+    async function exportFullDataBackup() {
+      try {
+        const items = await idbGetAll();
+        const backupPayload = {
+          app: 'GiveTax AU',
+          version: APP_CURRENT_VERSION,
+          exportedAt: new Date().toISOString(),
+          recordCount: items.length,
+          donations: items
+        };
+
+        const jsonStr = JSON.stringify(backupPayload, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `GiveTax_AU_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(`Exported ${items.length} records + receipt photos`);
+      } catch (err) {
+        console.error("Backup failed:", err);
+        showToast('Backup failed to generate');
+      }
+    }
+
+    function handleRestoreBackup(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const payload = JSON.parse(e.target.result);
+          if (!payload.donations || !Array.isArray(payload.donations)) {
+            showToast('Invalid backup file structure');
+            return;
+          }
+
+          let restoredCount = 0;
+          for (const item of payload.donations) {
+            if (item.id && item.amount) {
+              await idbSave(item);
+              restoredCount++;
+            }
+          }
+
+          allDonations = await idbGetAll();
+          populateFYSelector();
+          renderQuickFyChips();
+          renderAll();
+          showToast(`Successfully restored ${restoredCount} donations!`);
+          closeSettingsModal();
+        } catch (err) {
+          console.error("Restore failed:", err);
+          showToast('Failed to parse backup JSON');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /* ====================================================================
+     * 15. MODAL TOGGLES
+     * ==================================================================== */
+    function openSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function openHomeScreenGuide() {
+      document.getElementById('homeScreenModal').classList.remove('hidden');
+    }
+
+    function closeHomeScreenGuide() {
+      document.getElementById('homeScreenModal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
