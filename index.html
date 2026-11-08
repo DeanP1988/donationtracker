@@ -12,9 +12,11 @@
   <meta name="application-name" content="GiveTax AU">
   <meta name="theme-color" content="#000000">
 
-  <!-- Dynamic Apple Touch Icon: High-Resolution Australian Tax Giving Badge -->
-  <link rel="apple-touch-icon" id="appleTouchIconLink" href="">
-  <link rel="icon" type="image/svg+xml" id="faviconLink" href="">
+  <!-- Raster PNG Apple Touch Icons for iOS Safari (Crucial: Safari rejects SVG data URIs for home screen icons) -->
+  <link rel="apple-touch-icon" id="appleTouchIcon" sizes="180x180" href="">
+  <link rel="apple-touch-icon-precomposed" id="appleTouchIconPrecomposed" sizes="180x180" href="">
+  <link rel="icon" type="image/png" id="faviconPng" sizes="192x192" href="">
+  <link rel="manifest" id="webManifestLink" href="">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -365,9 +367,7 @@
         <!-- Add To Home Screen Banner for iPhone -->
         <div class="bg-[#141416] rounded-3xl p-4 border border-[#2C2C2E] flex items-center justify-between shadow-sm">
           <div class="flex items-center gap-3">
-            <div id="homescreenBannerIcon" class="w-10 h-10 rounded-2xl overflow-hidden shadow-md flex-shrink-0">
-              <!-- SVG App Icon Injected -->
-            </div>
+            <img id="homescreenBannerIconImg" class="w-11 h-11 rounded-2xl shadow-md flex-shrink-0 object-cover" alt="GiveTax AU App Icon">
             <div>
               <div class="text-xs font-bold text-white">Install on iPhone Home Screen</div>
               <div class="text-[11px] text-ios-subtext">Add to Safari with custom GiveTax icon</div>
@@ -566,9 +566,7 @@
         <div class="overflow-y-auto p-5 space-y-5 text-xs">
           <!-- App Info & Icon Preview -->
           <div class="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#141416] border border-[#2C2C2E]">
-            <div id="settingsAppIconPreview" class="w-14 h-14 rounded-2xl shadow-md overflow-hidden flex-shrink-0">
-              <!-- Rendered SVG App Icon -->
-            </div>
+            <img id="settingsAppIconImg" class="w-14 h-14 rounded-2xl shadow-md overflow-hidden flex-shrink-0 object-cover" alt="GiveTax AU Icon">
             <div>
               <div class="text-sm font-bold text-white flex items-center gap-1.5">
                 GiveTax AU <span class="text-[10px] bg-blue-500/15 text-ios-blue font-bold px-2 py-0.5 rounded-full border border-blue-500/30">v<span id="appCurrentVersion">2.4.0</span></span>
@@ -688,9 +686,7 @@
         </div>
 
         <div class="flex items-center gap-3 p-3 bg-[#141416] border border-[#2C2C2E] rounded-2xl">
-          <div id="modalAppIconPreview" class="w-14 h-14 rounded-2xl shadow-md overflow-hidden flex-shrink-0">
-            <!-- Icon Rendered -->
-          </div>
+          <img id="modalAppIconImg" class="w-14 h-14 rounded-2xl shadow-md overflow-hidden flex-shrink-0 object-cover" alt="GiveTax AU Icon">
           <div>
             <div class="text-xs font-bold text-white">GiveTax AU</div>
             <div class="text-[11px] text-ios-subtext">Tax Deductions & AUD Receipt Locker</div>
@@ -750,78 +746,198 @@
   <!-- SCRIPT LOGIC: IndexedDB, Australian Financial Year, Calculations & UI -->
   <script>
     /* ====================================================================
-     * 0. APP VERSION & IPHONE HOME SCREEN ICON GENERATOR
-     * Custom Australian Green/Gold Shield + Heart + AUD Coin Badge
+     * 0. APP VERSION & HIGH-RESOLUTION PNG APPLE TOUCH ICON GENERATOR
+     * iOS Safari requires an authentic PNG raster image (not an SVG data URI)
+     * to prevent falling back to a plain letter "G" on the home screen.
      * ==================================================================== */
     const APP_CURRENT_VERSION = '2.4.0';
     let availableNewVersion = null;
+    let generatedAppIconPngUrl = '';
 
-    function generateAppleTouchIconSVG() {
-      // 512x512 High-Resolution Apple Touch SVG Icon
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-        <defs>
-          <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#0F2027"/>
-            <stop offset="50%" stop-color="#203A43"/>
-            <stop offset="100%" stop-color="#2C5364"/>
-          </linearGradient>
-          <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#FFE000"/>
-            <stop offset="100%" stop-color="#799F0C"/>
-          </linearGradient>
-          <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#0052D4"/>
-            <stop offset="50%" stop-color="#4364F7"/>
-            <stop offset="100%" stop-color="#6FB1FC"/>
-          </linearGradient>
-          <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
-            <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000" flood-opacity="0.45"/>
-          </filter>
-        </defs>
-        
-        <!-- iOS Squircle / Rounded Background -->
-        <rect width="512" height="512" rx="115" fill="url(#bgGrad)"/>
-        
-        <!-- Subtle Australian Green Border Ring -->
-        <rect x="14" y="14" width="484" height="484" rx="103" fill="none" stroke="url(#goldGrad)" stroke-width="6" opacity="0.45"/>
+    function generateAppleTouchPngIcon(size = 180) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const scale = size / 512;
 
-        <!-- Australian Tax Giving Shield Badge -->
-        <g filter="url(#shadow)">
-          <path d="M256 64 C330 94 394 88 410 92 C414 176 414 278 256 424 C98 278 98 176 102 92 C118 88 182 94 256 64 Z" fill="url(#shieldGrad)"/>
-        </g>
-        
-        <!-- Gold Accent Trim on Shield -->
-        <path d="M256 78 C324 105 382 100 396 103 C400 178 398 268 256 398 C114 268 112 178 116 103 C130 100 188 105 256 78 Z" fill="none" stroke="#FFE000" stroke-width="6" opacity="0.8"/>
+      // 1. Dark Gradient Background with Rounded Corners
+      const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+      bgGrad.addColorStop(0, '#0F2027');
+      bgGrad.addColorStop(0.5, '#1B2E3D');
+      bgGrad.addColorStop(1, '#243B55');
 
-        <!-- Loving Hands / Heart Icon (Tax Giving) -->
-        <path d="M256 160 C242 135 212 124 184 135 C150 148 142 188 162 222 C184 260 256 312 256 312 C256 312 328 260 350 222 C370 188 362 148 328 135 C300 124 270 135 256 160 Z" fill="#FFFFFF" opacity="0.95"/>
-        
-        <!-- Golden AUD Coin -->
-        <circle cx="256" cy="208" r="42" fill="url(#goldGrad)" filter="url(#shadow)"/>
-        <text x="256" y="222" font-family="-apple-system, system-ui, BlinkMacSystemFont, 'SF Pro Display', sans-serif" font-size="40" font-weight="900" fill="#1C1C1E" text-anchor="middle">$</text>
-        
-        <!-- AU Label Ribbon at Bottom of Shield -->
-        <rect x="186" y="322" width="140" height="36" rx="18" fill="#FFE000"/>
-        <text x="256" y="347" font-family="-apple-system, system-ui, BlinkMacSystemFont, 'SF Pro Display', sans-serif" font-size="19" font-weight="900" fill="#102A43" text-anchor="middle" letter-spacing="2">DGR • AU</text>
-      </svg>`;
+      ctx.save();
+      const radius = 100 * scale;
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(size - radius, 0);
+      ctx.quadraticCurveTo(size, 0, size, radius);
+      ctx.lineTo(size, size - radius);
+      ctx.quadraticCurveTo(size, size, size - radius, size);
+      ctx.lineTo(radius, size);
+      ctx.quadraticCurveTo(0, size, 0, size - radius);
+      ctx.lineTo(0, radius);
+      ctx.quadraticCurveTo(0, 0, radius, 0);
+      ctx.closePath();
+      ctx.fillStyle = bgGrad;
+      ctx.fill();
+
+      // Golden outer trim ring
+      ctx.lineWidth = 6 * scale;
+      const goldGrad = ctx.createLinearGradient(0, 0, size, size);
+      goldGrad.addColorStop(0, '#FFD700');
+      goldGrad.addColorStop(1, '#30D158');
+      ctx.strokeStyle = goldGrad;
+      ctx.stroke();
+      ctx.restore();
+
+      // 2. Australian Blue Shield
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 18 * scale;
+      ctx.shadowOffsetY = 10 * scale;
+
+      const shieldGrad = ctx.createLinearGradient(0, 60 * scale, 0, 420 * scale);
+      shieldGrad.addColorStop(0, '#0A84FF');
+      shieldGrad.addColorStop(0.6, '#0055D4');
+      shieldGrad.addColorStop(1, '#0A2540');
+
+      ctx.beginPath();
+      ctx.moveTo(256 * scale, 72 * scale);
+      ctx.bezierCurveTo(330 * scale, 98 * scale, 396 * scale, 94 * scale, 410 * scale, 98 * scale);
+      ctx.bezierCurveTo(414 * scale, 180 * scale, 414 * scale, 280 * scale, 256 * scale, 420 * scale);
+      ctx.bezierCurveTo(98 * scale, 280 * scale, 98 * scale, 180 * scale, 102 * scale, 98 * scale);
+      ctx.bezierCurveTo(116 * scale, 94 * scale, 182 * scale, 98 * scale, 256 * scale, 72 * scale);
+      ctx.closePath();
+      ctx.fillStyle = shieldGrad;
+      ctx.fill();
+
+      // Shield Gold Border
+      ctx.lineWidth = 4 * scale;
+      ctx.strokeStyle = '#FFE000';
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. Loving Heart Shape (Tax Giving)
+      ctx.save();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      const topCurveHeight = 28 * scale;
+      const hx = 256 * scale;
+      const hy = 230 * scale;
+      const hw = 95 * scale;
+      const hh = 85 * scale;
+
+      ctx.moveTo(hx, hy);
+      ctx.bezierCurveTo(hx, hy - topCurveHeight, hx - hw, hy - topCurveHeight, hx - hw, hy + hh * 0.35);
+      ctx.bezierCurveTo(hx - hw, hy + hh * 0.8, hx - hw * 0.3, hy + hh * 1.1, hx, hy + hh * 1.4);
+      ctx.bezierCurveTo(hx + hw * 0.3, hy + hh * 1.1, hx + hw, hy + hh * 0.8, hx + hw, hy + hh * 0.35);
+      ctx.bezierCurveTo(hx + hw, hy - topCurveHeight, hx, hy - topCurveHeight, hx, hy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 4. Golden AUD Dollar Coin in Center
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = 10 * scale;
+      ctx.shadowOffsetY = 4 * scale;
+
+      const coinX = 256 * scale;
+      const coinY = 205 * scale;
+      const coinR = 48 * scale;
+
+      const coinGrad = ctx.createLinearGradient(coinX - coinR, coinY - coinR, coinX + coinR, coinY + coinR);
+      coinGrad.addColorStop(0, '#FFF275');
+      coinGrad.addColorStop(0.5, '#FFD700');
+      coinGrad.addColorStop(1, '#D4AF37');
+
+      ctx.beginPath();
+      ctx.arc(coinX, coinY, coinR, 0, Math.PI * 2);
+      ctx.fillStyle = coinGrad;
+      ctx.fill();
+      ctx.lineWidth = 3 * scale;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.stroke();
+
+      // $ Symbol
+      ctx.fillStyle = '#1C1C1E';
+      ctx.font = `bold ${52 * scale}px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('$', coinX, coinY + 2 * scale);
+      ctx.restore();
+
+      // 5. "DGR • AU" Badge Ribbon
+      ctx.save();
+      const rw = 150 * scale;
+      const rh = 34 * scale;
+      const rx = (256 * scale) - (rw / 2);
+      const ry = 345 * scale;
+
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(rx, ry, rw, rh, 16 * scale) : ctx.rect(rx, ry, rw, rh);
+      ctx.fill();
+
+      ctx.fillStyle = '#081726';
+      ctx.font = `900 ${18 * scale}px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('DGR • AU', 256 * scale, ry + (rh / 2) + 1 * scale);
+      ctx.restore();
+
+      return canvas.toDataURL('image/png');
     }
 
     function initAppleTouchIcon() {
-      const svg = generateAppleTouchIconSVG();
-      const encodedSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-      
-      const appleLink = document.getElementById('appleTouchIconLink');
-      const faviconLink = document.getElementById('faviconLink');
-      if (appleLink) appleLink.href = encodedSvg;
-      if (faviconLink) faviconLink.href = encodedSvg;
+      // 1. Generate real raster PNG data URI
+      generatedAppIconPngUrl = generateAppleTouchPngIcon(180);
 
-      // Also render into UI previews
-      const bannerIcon = document.getElementById('homescreenBannerIcon');
-      const settingsPreview = document.getElementById('settingsAppIconPreview');
-      const modalPreview = document.getElementById('modalAppIconPreview');
-      if (bannerIcon) bannerIcon.innerHTML = svg;
-      if (settingsPreview) settingsPreview.innerHTML = svg;
-      if (modalPreview) modalPreview.innerHTML = svg;
+      // 2. Assign to iOS Apple Touch Icon Link Tags
+      const appleLink = document.getElementById('appleTouchIcon');
+      const precomposedLink = document.getElementById('appleTouchIconPrecomposed');
+      const faviconLink = document.getElementById('faviconPng');
+      
+      if (appleLink) appleLink.href = generatedAppIconPngUrl;
+      if (precomposedLink) precomposedLink.href = generatedAppIconPngUrl;
+      if (faviconLink) faviconLink.href = generatedAppIconPngUrl;
+
+      // 3. Inject Dynamic PWA Manifest containing the PNG Icon
+      const manifestObject = {
+        name: "GiveTax AU - Donation & Tax Tracker",
+        short_name: "GiveTax AU",
+        start_url: window.location.href,
+        display: "standalone",
+        background_color: "#000000",
+        theme_color: "#000000",
+        icons: [
+          {
+            src: generatedAppIconPngUrl,
+            sizes: "180x180",
+            type: "image/png"
+          },
+          {
+            src: generatedAppIconPngUrl,
+            sizes: "192x192",
+            type: "image/png"
+          }
+        ]
+      };
+
+      const manifestBlob = new Blob([JSON.stringify(manifestObject)], { type: 'application/json' });
+      const manifestUrl = URL.createObjectURL(manifestBlob);
+      const manifestLink = document.getElementById('webManifestLink');
+      if (manifestLink) manifestLink.href = manifestUrl;
+
+      // 4. Update preview images across the app UI
+      const bannerIcon = document.getElementById('homescreenBannerIconImg');
+      const settingsPreview = document.getElementById('settingsAppIconImg');
+      const modalPreview = document.getElementById('modalAppIconImg');
+      if (bannerIcon) bannerIcon.src = generatedAppIconPngUrl;
+      if (settingsPreview) settingsPreview.src = generatedAppIconPngUrl;
+      if (modalPreview) modalPreview.src = generatedAppIconPngUrl;
     }
 
     /* ====================================================================
@@ -942,58 +1058,6 @@
         initAppleTouchIcon();
         await openDatabase();
         allDonations = await idbGetAll();
-
-        // Populate sample data if DB is empty for realistic preview
-        if (allDonations.length === 0) {
-          const sampleDate1 = new Date();
-          sampleDate1.setDate(sampleDate1.getDate() - 10);
-          const sampleDate2 = new Date();
-          sampleDate2.setDate(sampleDate2.getDate() - 40);
-
-          const samples = [
-            {
-              id: 'sample-1',
-              charity: 'Australian Red Cross',
-              amount: 85.00,
-              date: sampleDate1.toISOString().split('T')[0],
-              fy: getFinancialYear(sampleDate1),
-              isDgr: true,
-              category: 'Humanitarian',
-              paymentMethod: 'Credit / Debit Card',
-              notes: 'Flood Appeal Donation - Ref #ARC88391',
-              receiptPhoto: null
-            },
-            {
-              id: 'sample-2',
-              charity: 'Cancer Council Australia',
-              amount: 50.00,
-              date: sampleDate2.toISOString().split('T')[0],
-              fy: getFinancialYear(sampleDate2),
-              isDgr: true,
-              category: 'Health & Medical',
-              paymentMethod: 'Apple Pay / Google Pay',
-              notes: 'Daffodil Day Gift #CC-49910',
-              receiptPhoto: null
-            },
-            {
-              id: 'sample-3',
-              charity: 'Local School Trivia Raffle',
-              amount: 25.00,
-              date: sampleDate2.toISOString().split('T')[0],
-              fy: getFinancialYear(sampleDate2),
-              isDgr: false, // Raffle tickets are NOT DGR tax deductible
-              category: 'Education & Research',
-              paymentMethod: 'Cash',
-              notes: 'Trivia Night 5x raffle tickets (Not tax-deductible)',
-              receiptPhoto: null
-            }
-          ];
-
-          for (const s of samples) {
-            await idbSave(s);
-          }
-          allDonations = await idbGetAll();
-        }
 
         // Initialize UI FY dropdown and chips
         populateFYSelector();
@@ -1196,7 +1260,7 @@
       if (items.length === 0) {
         container.innerHTML = `
           <div class="bg-[#1C1C1E] border border-dashed border-[#2C2C2E] rounded-2xl p-6 text-center text-xs text-ios-subtext">
-            No donations logged for ${selectedFY} yet.<br>Tap <span class="text-ios-blue font-semibold cursor-pointer" onclick="openAddModal()">+ Add Receipt</span> to get started.
+            No donations logged for this financial year yet.<br>Tap <span class="text-ios-blue font-semibold cursor-pointer" onclick="openAddModal()">+ Add Gift</span> to add your first tax-deductible receipt.
           </div>
         `;
         return;
